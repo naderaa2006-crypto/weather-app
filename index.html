@@ -1,0 +1,474 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- WEATHER VIDEO BACKGROUND -->
+    
+
+    <main class="weather-app">
+
+        <header class="header">
+            <h1>Weather App</h1>
+            <p>Discover the weather in your city</p>
+        </header>
+
+        <section class="search-section">
+            <input type="text" id="city-input"
+                placeholder="Enter city name..." autocomplete="off">
+            <button id="search-btn">Search</button>
+        </section>
+
+        <section class="current-weather">
+            <h2 id="city-name">Loading...</h2>
+            <div class="current-icon" id="current-weather-icon">☀️</div>
+            <div class="temperature">
+                <span id="temperature">--°C</span>
+            </div>
+            <p id="weather-description">Loading weather...</p>
+            <p id="feels-like">Feels like --°C</p>
+
+            <div class="weather-details">
+                <div class="detail">
+                    <span>Humidity</span>
+                    <p id="humidity">--%</p>
+                </div>
+                <div class="detail">
+                    <span>Wind Speed</span>
+                    <p id="wind-speed">-- km/h</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="hourly-section">
+            <div class="section-heading">
+                <h2>Hourly Forecast</h2>
+                <span>Next 24 hours</span>
+            </div>
+            <div class="hourly-container" id="hourly-container">
+                <p>Loading hourly forecast...</p>
+            </div>
+        </section>
+
+        <section class="sun-section">
+            <h2>Sunrise &amp; Sunset</h2>
+
+            <div class="sun-times">
+                <div class="sun-time-item">
+                    <span class="sun-symbol">🌅</span>
+                    <div>
+                        <span class="sun-label">Sunrise</span>
+                        <p id="sunrise-time">--:--</p>
+                    </div>
+                </div>
+
+                <div class="sun-time-item">
+                    <span class="sun-symbol">🌇</span>
+                    <div>
+                        <span class="sun-label">Sunset</span>
+                        <p id="sunset-time">--:--</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sun-progress-area">
+                <div class="sun-progress-track">
+                    <div class="sun-progress-fill" id="sun-progress-fill"></div>
+                    <div class="sun-progress-dot" id="sun-progress-dot">☀️</div>
+                </div>
+                <div class="sun-progress-labels">
+                    <span id="day-length">Daylight: -- hours</span>
+                    <span id="sun-progress-text">--</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="forecast-section">
+            <h2>7-Day Forecast</h2>
+            <div class="forecast-container" id="forecast-container">
+                <p>Loading forecast...</p>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // HTML ELEMENTS
+
+        const weatherVideo = document.getElementById("weather-video");
+
+        const cityInput = document.getElementById("city-input");
+        const searchButton = document.getElementById("search-btn");
+
+        const cityName = document.getElementById("city-name");
+        const currentIcon = document.getElementById("current-weather-icon");
+        const temperature = document.getElementById("temperature");
+        const weatherDescription = document.getElementById("weather-description");
+        const feelsLike = document.getElementById("feels-like");
+        const humidity = document.getElementById("humidity");
+        const windSpeed = document.getElementById("wind-speed");
+
+        const hourlyContainer = document.getElementById("hourly-container");
+        const forecastContainer = document.getElementById("forecast-container");
+
+        const sunriseTime = document.getElementById("sunrise-time");
+        const sunsetTime = document.getElementById("sunset-time");
+        const dayLength = document.getElementById("day-length");
+        const sunProgressFill = document.getElementById("sun-progress-fill");
+        const sunProgressDot = document.getElementById("sun-progress-dot");
+        const sunProgressText = document.getElementById("sun-progress-text");
+
+        // WEATHER DESCRIPTIONS
+
+        function getWeatherDescription(code) {
+            const descriptions = {
+                0: "Clear sky",
+                1: "Mainly clear",
+                2: "Partly cloudy",
+                3: "Overcast",
+                45: "Fog",
+                48: "Depositing rime fog",
+                51: "Light drizzle",
+                53: "Moderate drizzle",
+                55: "Dense drizzle",
+                56: "Freezing drizzle",
+                57: "Dense freezing drizzle",
+                61: "Slight rain",
+                63: "Moderate rain",
+                65: "Heavy rain",
+                66: "Freezing rain",
+                67: "Heavy freezing rain",
+                71: "Slight snow",
+                73: "Moderate snow",
+                75: "Heavy snow",
+                77: "Snow grains",
+                80: "Slight rain showers",
+                81: "Moderate rain showers",
+                82: "Violent rain showers",
+                85: "Slight snow showers",
+                86: "Heavy snow showers",
+                95: "Thunderstorm",
+                96: "Thunderstorm with hail",
+                99: "Heavy thunderstorm with hail"
+            };
+
+            return descriptions[code] || "Unknown weather";
+        }
+
+        // WEATHER ICONS
+
+        function getWeatherIcon(code, isDay = 1) {
+            if (code === 0) return isDay ? "☀️" : "🌙";
+            if (code === 1) return isDay ? "🌤️" : "🌙";
+            if (code === 2) return isDay ? "⛅" : "☁️";
+            if (code === 3) return "☁️";
+            if ([45, 48].includes(code)) return "🌫️";
+            if ([51, 53, 55, 56, 57].includes(code)) return "🌦️";
+            if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return "🌧️";
+            if ([71, 73, 75, 77, 85, 86].includes(code)) return "❄️";
+            if ([95, 96, 99].includes(code)) return "⛈️";
+            return "🌡️";
+        }
+
+        // WEATHER VIDEO CONTROL
+
+        function updateWeatherBackground(weatherCode) {
+            console.log("Weather code:", weatherCode);
+            const rainCodes = [
+                51, 53, 55, 56, 57,
+                61, 63, 65, 66, 67,
+                80, 81, 82, 95, 96, 99
+            ];
+
+            const snowCodes = [71, 73, 75, 77, 85, 86];
+            const fogCodes = [45, 48];
+
+            let videoFile = "clear.mp4";
+
+            if (rainCodes.includes(weatherCode)) {
+                videoFile = "rain.mp4";
+            } else if (snowCodes.includes(weatherCode)) {
+                videoFile = "snow.mp4";
+            } else if (fogCodes.includes(weatherCode)) {
+                videoFile = "fog.mp4";
+            }
+
+            const videoPath = `assetsvideos/${videoFile}`;
+
+            if (weatherVideo.getAttribute("src") === videoPath) {
+                return;
+            }
+
+            weatherVideo.pause();
+            weatherVideo.src = videoPath;
+            weatherVideo.load();
+
+            weatherVideo.play().catch(error => {
+                console.warn("Video playback failed:", error);
+            });
+        }
+
+        // SEARCH CITY
+
+        async function searchCity(city) {
+            const query = city.trim();
+
+            if (!query) {
+                alert("Please enter a city name.");
+                return;
+            }
+
+            searchButton.disabled = true;
+            searchButton.textContent = "Searching...";
+
+            try {
+                const url =
+                    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`;
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error("City search failed.");
+                }
+
+                const data = await response.json();
+
+                if (!data.results || data.results.length === 0) {
+                    alert("City not found.");
+                    return;
+                }
+
+                const city = data.results[0];
+
+                await getWeather(
+                    city.latitude,
+                    city.longitude,
+                    city.name,
+                    city.country
+                );
+
+            } catch (error) {
+                console.error("Search error:", error);
+                alert("Unable to search. Check your internet connection.");
+            } finally {
+                searchButton.disabled = false;
+                searchButton.textContent = "Search";
+            }
+        }
+
+        // GET WEATHER DATA
+
+        async function getWeather(latitude, longitude, name, country) {
+            try {
+                const url =
+                    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code,precipitation_probability,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto&forecast_days=7`;
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error("Weather request failed.");
+                }
+
+                const data = await response.json();
+
+                if (!data.current || !data.hourly || !data.daily) {
+                    throw new Error("Invalid weather data.");
+                }
+
+                displayCurrentWeather(data, name, country);
+                displayHourlyForecast(data.hourly, data.current.time);
+                displaySunInformation(data);
+                displayForecast(data.daily);
+
+                updateWeatherBackground(data.current.weather_code);
+
+            } catch (error) {
+                console.error("Weather error:", error);
+                alert("Unable to load weather data.");
+            }
+        }
+
+        // CURRENT WEATHER
+
+        function displayCurrentWeather(data, name, country) {
+            const current = data.current;
+
+            cityName.textContent = `${name}, ${country}`;
+
+            currentIcon.textContent = getWeatherIcon(
+                current.weather_code,
+                current.is_day
+            );
+
+            temperature.textContent = `${Math.round(current.temperature_2m)}°C`;
+            weatherDescription.textContent = getWeatherDescription(current.weather_code);
+            feelsLike.textContent = `Feels like ${Math.round(current.apparent_temperature)}°`;
+            humidity.textContent = `${current.relative_humidity_2m}%`;
+            windSpeed.textContent = `${current.wind_speed_10m} km/h`;
+        }
+
+        // HOURLY FORECAST
+
+        function displayHourlyForecast(hourly, currentTime) {
+            hourlyContainer.innerHTML = "";
+
+            const currentIndex = hourly.time.indexOf(currentTime);
+
+            const startIndex = currentIndex >= 0
+                ? currentIndex
+                : hourly.time.findIndex(time => time >= currentTime);
+
+            if (startIndex < 0) {
+                hourlyContainer.textContent = "Hourly forecast unavailable.";
+                return;
+            }
+
+            const endIndex = Math.min(startIndex + 24, hourly.time.length);
+
+            for (let i = startIndex; i < endIndex; i++) {
+                const hourLabel = hourly.time[i].slice(11, 16);
+                const isCurrentHour = i === startIndex;
+
+                const card = document.createElement("div");
+                card.className = "hourly-card";
+
+                if (isCurrentHour) {
+                    card.classList.add("active-hour");
+                }
+
+                const time = document.createElement("span");
+                time.className = "hourly-time";
+                time.textContent = isCurrentHour ? "Now" : hourLabel;
+
+                const icon = document.createElement("div");
+                icon.className = "hourly-icon";
+                icon.textContent = getWeatherIcon(
+                    hourly.weather_code[i],
+                    hourly.is_day[i]
+                );
+
+                const temp = document.createElement("strong");
+                temp.className = "hourly-temperature";
+                temp.textContent = `${Math.round(hourly.temperature_2m[i])}°`;
+
+                const rain = document.createElement("span");
+                rain.className = "hourly-rain";
+                rain.textContent = `${hourly.precipitation_probability[i] ?? 0}% rain`;
+
+                card.append(time, icon, temp, rain);
+                hourlyContainer.appendChild(card);
+            }
+        }
+
+        // SUNRISE AND SUNSET
+
+        function getMinutesFromTime(timeString) {
+            const parts = timeString.slice(11, 16).split(":");
+            return Number(parts[0]) * 60 + Number(parts[1]);
+        }
+
+        function displaySunInformation(data) {
+            const sunrise = data.daily.sunrise[0];
+            const sunset = data.daily.sunset[0];
+
+            const sunriseMinutes = getMinutesFromTime(sunrise);
+            const sunsetMinutes = getMinutesFromTime(sunset);
+            const currentMinutes = getMinutesFromTime(data.current.time);
+
+            const totalDaylight = sunsetMinutes - sunriseMinutes;
+
+            if (totalDaylight <= 0) return;
+
+            const elapsedMinutes = currentMinutes - sunriseMinutes;
+
+            const progress = Math.max(
+                0,
+                Math.min(100, (elapsedMinutes / totalDaylight) * 100)
+            );
+
+            const hours = Math.floor(totalDaylight / 60);
+            const minutes = totalDaylight % 60;
+
+            sunriseTime.textContent = sunrise.slice(11, 16);
+            sunsetTime.textContent = sunset.slice(11, 16);
+            dayLength.textContent = `Daylight: ${hours}h ${minutes}m`;
+
+            sunProgressFill.style.width = `${progress}%`;
+            sunProgressDot.style.left = `${progress}%`;
+
+            if (currentMinutes < sunriseMinutes) {
+                sunProgressText.textContent = "Before sunrise";
+            } else if (currentMinutes >= sunsetMinutes) {
+                sunProgressText.textContent = "After sunset";
+            } else {
+                sunProgressText.textContent = `${Math.round(progress)}% of daylight`;
+            }
+        }
+
+        // 7-DAY FORECAST
+
+        function displayForecast(daily) {
+            forecastContainer.innerHTML = "";
+
+            for (let i = 0; i < daily.time.length; i++) {
+                const date = new Date(`${daily.time[i]}T12:00:00`);
+
+                const dayName = date.toLocaleDateString("en-US", {
+                    weekday: "short"
+                });
+
+                const card = document.createElement("div");
+                card.className = "forecast-card";
+
+                const day = document.createElement("h3");
+                day.textContent = dayName;
+
+                const icon = document.createElement("div");
+                icon.className = "forecast-icon";
+                icon.textContent = getWeatherIcon(daily.weather_code[i]);
+
+                const condition = document.createElement("p");
+                condition.textContent = getWeatherDescription(daily.weather_code[i]);
+
+                const temperatures = document.createElement("div");
+                temperatures.className = "forecast-temperatures";
+
+                const max = document.createElement("span");
+                max.className = "max-temp";
+                max.textContent = `${Math.round(daily.temperature_2m_max[i])}°`;
+
+                const min = document.createElement("span");
+                min.className = "min-temp";
+                min.textContent = `${Math.round(daily.temperature_2m_min[i])}°`;
+
+                temperatures.append(max, min);
+                card.append(day, icon, condition, temperatures);
+                forecastContainer.appendChild(card);
+            }
+        }
+
+        // SEARCH EVENTS
+
+        searchButton.addEventListener("click", () => {
+            searchCity(cityInput.value);
+        });
+
+        cityInput.addEventListener("keydown", event => {
+            if (event.key === "Enter") {
+                searchCity(cityInput.value);
+            }
+        });
+
+        // INITIAL WEATHER
+
+        searchCity("Jeddah");
+    </script>
+
+</body>
+</html>
